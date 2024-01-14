@@ -1,0 +1,36 @@
+from flask import Flask, request, jsonify
+import requests
+import os
+
+app = Flask(__name__)
+
+FOODVISOR_API_KEY = " "  
+
+@app.route('/analyze_food', methods=['POST'])
+def analyze_food():
+    try:
+        image_data = request.files['image'].read()
+        foodvisor_url = "https://vision.foodvisor.io/api/1.0/en/analysis/"
+        headers = {"Authorization": f"Api-Key {FOODVISOR_API_KEY}"}
+        files = {"image": image_data}
+
+        response = requests.post(foodvisor_url, headers=headers, files=files)
+        response.raise_for_status()
+        data = response.json()
+
+        first_food_item = data.get('items', [])[0]
+        food_name = first_food_item.get('food', [])[0].get('food_info', {}).get('display_name', 'Unknown Food')
+        nutritional_info = first_food_item.get('food', [])[0].get('food_info', {}).get('nutrition', {})
+
+        simplified_response = {
+            "food_name": food_name,
+            "nutritional_info": nutritional_info
+        }
+
+        return jsonify(simplified_response)
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+if __name__ == '__main__':
+    app.run(debug=True)
